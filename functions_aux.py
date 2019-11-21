@@ -3,6 +3,7 @@ from matplotlib import cm
 import matplotlib as mpl
 import numpy as np
 import itertools
+from scipy.optimize import minimize
 
 def circle_labels(X):
     radius = np.sqrt(2 / np.pi)
@@ -31,8 +32,8 @@ def draw_circle(Data, colorbar=False, check=False, title=''):
     X = Data[0]
     Y = Data[1]
     if check:
-        cmap = cm.get_cmap('RdYlGn')
-        norm = mpl.colors.Normalize(vmin=0,vmax=1)
+        cmap = cm.get_cmap('Set1')
+        norm = mpl.colors.Normalize(vmin=0,vmax=4)
     else:
         cmap = cm.get_cmap('plasma')
         norm = mpl.colors.Normalize(vmin=0,vmax=1.2)
@@ -68,17 +69,17 @@ def draw_squares(Data, colorbar=False, check=False, title=''):
     X = Data[0]
     Y = Data[1]
     if check:
-        cmap = cm.get_cmap('RdYlGn')
-        norm = mpl.colors.Normalize(vmin=0,vmax=1)
+        cmap = cm.get_cmap('Set1')
+        norm = mpl.colors.Normalize(vmin=0,vmax=4)
     else:
-        cmap = cm.get_cmap('brg')
-        norm = mpl.colors.Normalize(vmin=0,vmax=3)
+        cmap = cm.get_cmap('tab10')
+        norm = mpl.colors.Normalize(vmin=0,vmax=9)
 
     fig, ax = plt.subplots()
     c=ax.scatter(X[:, 0], X[:, 1], c=Y, cmap=cmap, norm = norm)
     ax.plot([0,0], [-1,1], color='black')
     ax.plot([-1,1], [0,0], color='black')
-    ax.set(xlim=[-1,1], ylim=[-1,1], title='')
+    ax.set(xlim=[-1,1], ylim=[-1,1], title=title)
     ax.set_aspect('equal', 'box')
     if colorbar:
         fig.colorbar(c, ax = ax)
@@ -104,3 +105,29 @@ def swipe_check(F, Y):
             p_sol = p
             
     return s, p_sol
+
+
+def _weight_fidelities(f, w):
+    return f*w
+
+def cost_weights(w, Y, F):
+    cost=0
+    for f,y in zip(F, Y):
+        f_ = np.argmax(_weight_fidelities(f,w))
+        if f_ != y:
+            cost += 1
+            
+    return cost / len(Y)
+    
+    
+def weighted_fidelity(F, w):
+    wF = np.empty(len(F))
+    for i, f in enumerate(F):
+        wF[i] = np.argmax(_weight_fidelities(f, w))
+        
+    return wF
+
+def get_optimal_weights(Y_test, F_test):
+    opt_weights = minimize(cost_weights, np.ones(4), args=(Y_test, F_test), method='Powell').x #optimize weights
+    
+    return opt_weights
